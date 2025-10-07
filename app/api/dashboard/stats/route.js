@@ -1,4 +1,3 @@
-import connectDB from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import ViewLog from '../../../../models/ViewLog';
 import ConnectionRequest from '../../../../models/ConnectionRequest';
@@ -7,7 +6,6 @@ import { withAuth } from '../../../../lib/auth-middleware';
 
 async function getDashboardStatsHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
 

@@ -1,11 +1,9 @@
 
 import User from '../../../../../models/User';
 import { withAuth } from '../../../../../lib/auth-middleware';
-import connectDB from '../../../../../lib/mongodb';
 
 async function saveBusinessTypeHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const { businessType } = await request.json();
@@ -60,7 +58,6 @@ async function saveBusinessTypeHandler(request) {
 
 async function getBusinessTypeHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
 

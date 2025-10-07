@@ -1,11 +1,9 @@
-import connectDB from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import { withAuth } from '../../../../lib/auth-middleware';
 
 // Get user profile
 async function getProfileHandler(request) {
   try {
-    await connectDB();
     
     const user = request.user;
 
@@ -62,7 +60,6 @@ async function getProfileHandler(request) {
 
 async function updateProfileHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const updateData = await request.json();

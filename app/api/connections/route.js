@@ -1,4 +1,3 @@
-import connectDB from '../../../lib/mongodb';
 import User from '../../../models/User';
 import ConnectionRequest from '../../../models/ConnectionRequest';
 import Notification from '../../../models/Notification';
@@ -7,7 +6,6 @@ import { withAuth } from '../../../lib/auth-middleware';
 
 async function getConnectionsHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const { searchParams } = new URL(request.url);
@@ -40,7 +38,6 @@ async function getConnectionsHandler(request) {
 
 async function sendConnectionRequestHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user;
     const body = await request.json();

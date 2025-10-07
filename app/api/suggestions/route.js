@@ -1,4 +1,3 @@
-import connectDB from '../../../lib/mongodb';
 import User from '../../../models/User';
 import ConnectionRequest from '../../../models/ConnectionRequest';
 import ViewLog from '../../../models/ViewLog';
@@ -7,7 +6,6 @@ import { withCompletedProfile } from '../../../lib/auth-middleware';
 // Get suggestions - requires completed profile
 async function getSuggestionsHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const { searchParams } = new URL(request.url);
@@ -354,7 +352,6 @@ function getRoleSpecificFields(user, userRole) {
 
 async function postSuggestionsHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const body = await request.json();

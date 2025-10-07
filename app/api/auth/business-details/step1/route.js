@@ -1,12 +1,10 @@
 
 import User from '../../../../../models/User';
 import { withAuth } from '../../../../../lib/auth-middleware';
-import connectDB from '../../../../../lib/mongodb';
 
 
 async function saveBusinessDetailsStep1Handler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const { 
@@ -75,7 +73,6 @@ async function saveBusinessDetailsStep1Handler(request) {
 
 async function getBusinessDetailsStep1Handler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
 

@@ -1,4 +1,3 @@
-import connectDB from '../../../../lib/mongodb';
 import User from '../../../../models/User';
 import ConnectionRequest from '../../../../models/ConnectionRequest';
 import { withAuth } from '../../../../lib/auth-middleware';
@@ -6,7 +5,6 @@ import { withAuth } from '../../../../lib/auth-middleware';
 
 async function getPendingRequestsHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const { searchParams } = new URL(request.url);

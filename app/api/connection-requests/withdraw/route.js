@@ -1,4 +1,3 @@
-import connectDB from '../../../../lib/mongodb';
 import ConnectionRequest from '../../../../models/ConnectionRequest';
 import Notification from '../../../../models/Notification';
 import User from '../../../../models/User';
@@ -7,7 +6,6 @@ import { withAuth } from '../../../../lib/auth-middleware';
 // POST /api/connection-requests/withdraw - Withdraw a sent connection request
 async function withdrawRequestHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user;
     const body = await request.json();

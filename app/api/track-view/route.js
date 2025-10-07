@@ -1,4 +1,3 @@
-import connectDB from '../../../lib/mongodb';
 import User from '../../../models/User';
 import ViewLog from '../../../models/ViewLog';
 import { withAuth } from '../../../lib/auth-middleware';
@@ -6,7 +5,6 @@ import { withAuth } from '../../../lib/auth-middleware';
 
 async function trackViewHandler(request) {
   try {
-    await connectDB();
 
     const user = request.user; 
     const viewerId = user.userId;
