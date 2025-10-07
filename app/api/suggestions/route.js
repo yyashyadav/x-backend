@@ -1,8 +1,8 @@
-import connectDB from '../../lib/mongodb';
-import User from '../../models/User';
-import ConnectionRequest from '../../models/ConnectionRequest';
-import ViewLog from '../../models/ViewLog';
-import { withCompletedProfile } from '../../lib/auth-middleware';
+import connectDB from '../../../lib/mongodb';
+import User from '../../../models/User';
+import ConnectionRequest from '../../../models/ConnectionRequest';
+import ViewLog from '../../../models/ViewLog';
+import { withCompletedProfile } from '../../../lib/auth-middleware';
 
 // Get suggestions - requires completed profile
 async function getSuggestionsHandler(request) {
@@ -110,53 +110,131 @@ async function getRoleBasedSuggestions(userId, userRole, limit = 10, filterType 
 
 
 function getTargetRoles(userRole) {
+  // Based on the network diagram showing business relationship patterns
   const roleMapping = {
+    // Sellers & Startups can connect to Investors & Buyers (bidirectional)
+    seller: ['investor', 'buyer'],
+    startup: ['investor', 'buyer'],
+    
+    // Investors & Buyers can connect to Sellers & Startups (bidirectional)
     investor: ['startup', 'seller'],
-    seller: ['investor', 'consultant'],
-    startup: ['investor', 'consultant'],
-    consultant: ['startup', 'seller'],
-    franchise: ['investor', 'consultant'],
-    impexp: ['impexp', 'investor', 'consultant']
+    buyer: ['startup', 'seller'],
+    
+    // Consultants & Advisors - central hub with specific relationships
+    consultant: ['startup', 'seller', 'franchisor', 'impexp'], // Can suggest to all
+    advisor: ['startup', 'seller', 'franchisor', 'impexp'], // Can suggest to all
+    
+    // Franchisors can suggest to Consultants & Advisors (bidirectional yellow arrow)
+    franchisor: ['consultant', 'advisor', 'investor', 'buyer'],
+    
+    // Importers & Exporters can suggest to Consultants & Advisors (bidirectional yellow arrow)
+    impexp: ['consultant', 'advisor', 'investor', 'buyer'],
+    
+    // Default fallback
+    default: []
   };
-  return roleMapping[userRole] || [];
+  
+  // Handle role variations
+  const normalizedRole = userRole.toLowerCase();
+  return roleMapping[normalizedRole] || roleMapping.default;
 }
 
 // Helper function to add role-specific matching criteria
 function addRoleSpecificCriteria(query, currentUser, userRole) {
-  // Add industry matching for investors
-  if (userRole === 'investor' && currentUser.industry) {
+  const role = userRole.toLowerCase();
+  
+  // Industry matching for investors and buyers
+  if ((role === 'investor' || role === 'buyer') && currentUser.industry) {
     query.industry = currentUser.industry;
   }
   
+  // Consultants/Advisors can match across industries but prefer same location
+  if (role === 'consultant' || role === 'advisor') {
+    // No strict industry filtering for consultants as they work across industries
+    // But prefer same location for easier collaboration
+  }
+  
+  // Franchisors looking for consultants with franchise experience
+  if (role === 'franchisor') {
+    // Could add franchise-specific criteria here if you have franchise-related fields
+  }
+  
+  // Import/Export companies looking for trade-related connections
+  if (role === 'impexp') {
+    // Could add trade-specific criteria here if you have trade-related fields
+  }
 
   return query;
 }
 
 
 function calculateMatchScore(currentUser, suggestedUser, userRole) {
-  let score = 50; // Base score
+  let score = 30; // Base score
+  const currentRole = userRole.toLowerCase();
+  const suggestedRole = suggestedUser.role.toLowerCase();
 
- 
+  // Industry matching
   if (currentUser.industry === suggestedUser.industry) {
+    score += 25;
+  }
+
+  // Location matching
+  if (currentUser.city === suggestedUser.city) {
+    score += 20;
+  } else if (currentUser.state === suggestedUser.state) {
+    score += 15;
+  } else if (currentUser.country === suggestedUser.country) {
+    score += 10;
+  }
+
+  // Business relationship scoring based on network diagram
+  
+  // High-priority relationships (yellow arrows in diagram)
+  // Franchisors ↔ Consultants & Advisors (bidirectional)
+  if ((currentRole === 'franchisor' && (suggestedRole === 'consultant' || suggestedRole === 'advisor')) ||
+      ((currentRole === 'consultant' || currentRole === 'advisor') && suggestedRole === 'franchisor')) {
+    score += 30;
+  }
+  
+  // Importers & Exporters ↔ Consultants & Advisors (bidirectional)
+  if ((currentRole === 'impexp' && (suggestedRole === 'consultant' || suggestedRole === 'advisor')) ||
+      ((currentRole === 'consultant' || currentRole === 'advisor') && suggestedRole === 'impexp')) {
+    score += 30;
+  }
+
+  // Medium-priority relationships (blue arrows in diagram)
+  // Sellers & Startups ↔ Investors & Buyers (bidirectional)
+  if (((currentRole === 'seller' || currentRole === 'startup') && (suggestedRole === 'investor' || suggestedRole === 'buyer')) ||
+      ((currentRole === 'investor' || currentRole === 'buyer') && (suggestedRole === 'startup' || suggestedRole === 'seller'))) {
+    score += 25;
+  }
+
+  // Sellers & Startups → Consultants & Advisors
+  if ((currentRole === 'seller' || currentRole === 'startup') && (suggestedRole === 'consultant' || suggestedRole === 'advisor')) {
     score += 20;
   }
 
+  // Consultants & Advisors → Investors & Buyers
+  if ((currentRole === 'consultant' || currentRole === 'advisor') && (suggestedRole === 'investor' || suggestedRole === 'buyer')) {
+    score += 20;
+  }
 
-  if (currentUser.city === suggestedUser.city) {
+  // Franchisors → Investors & Buyers
+  if (currentRole === 'franchisor' && (suggestedRole === 'investor' || suggestedRole === 'buyer')) {
+    score += 20;
+  }
+
+  // Importers & Exporters → Investors & Buyers
+  if (currentRole === 'impexp' && (suggestedRole === 'investor' || suggestedRole === 'buyer')) {
+    score += 20;
+  }
+
+  // Investment-specific scoring
+  if (currentRole === 'investor' && suggestedUser.investmentRequired) {
     score += 15;
-  } else if (currentUser.state === suggestedUser.state) {
-    score += 10;
-  } else if (currentUser.country === suggestedUser.country) {
-    score += 5;
   }
 
-  
-  if (userRole === 'investor' && suggestedUser.investmentRequired) {
-  
-    score += 10;
-  }
-
-  
+  // Profile completeness
   if (suggestedUser.briefIntroduction) score += 5;
   if (suggestedUser.website) score += 5;
 
@@ -175,13 +253,52 @@ function getMatchReason(currentUser, suggestedUser, userRole) {
     reasons.push('Same location');
   }
   
-  // Role-specific reasons
-  if (userRole === 'investor' && suggestedUser.role === 'startup') {
-    reasons.push('Looking for investment');
-  } else if (userRole === 'startup' && suggestedUser.role === 'investor') {
-    reasons.push('Active investor');
-  } else if (suggestedUser.role === 'consultant') {
-    reasons.push('Business expertise');
+  // Business relationship reasons based on network diagram
+  const currentRole = userRole.toLowerCase();
+  const suggestedRole = suggestedUser.role.toLowerCase();
+  
+  // Sellers & Startups ↔ Investors & Buyers
+  if ((currentRole === 'seller' || currentRole === 'startup') && 
+      (suggestedRole === 'investor' || suggestedRole === 'buyer')) {
+    reasons.push('Investment/business opportunity');
+  }
+  
+  if ((currentRole === 'investor' || currentRole === 'buyer') && 
+      (suggestedRole === 'startup' || suggestedRole === 'seller')) {
+    reasons.push('Potential investment target');
+  }
+  
+  // Consultants & Advisors - central hub relationships
+  if (suggestedRole === 'consultant' || suggestedRole === 'advisor') {
+    reasons.push('Business expertise & guidance');
+  }
+  
+  if (currentRole === 'consultant' || currentRole === 'advisor') {
+    if (suggestedRole === 'startup' || suggestedRole === 'seller') {
+      reasons.push('Business development opportunity');
+    } else if (suggestedRole === 'franchisor') {
+      reasons.push('Franchise expansion consulting');
+    } else if (suggestedRole === 'impexp') {
+      reasons.push('Import/export consulting');
+    }
+  }
+  
+  // Franchisors relationships
+  if (currentRole === 'franchisor') {
+    if (suggestedRole === 'consultant' || suggestedRole === 'advisor') {
+      reasons.push('Franchise development consulting');
+    } else if (suggestedRole === 'investor' || suggestedRole === 'buyer') {
+      reasons.push('Franchise investment opportunity');
+    }
+  }
+  
+  // Importers & Exporters relationships
+  if (currentRole === 'impexp') {
+    if (suggestedRole === 'consultant' || suggestedRole === 'advisor') {
+      reasons.push('Trade consulting & advisory');
+    } else if (suggestedRole === 'investor' || suggestedRole === 'buyer') {
+      reasons.push('International trade opportunity');
+    }
   }
 
   return reasons.length > 0 ? reasons.join(', ') : 'Potential business opportunity';
@@ -190,15 +307,45 @@ function getMatchReason(currentUser, suggestedUser, userRole) {
 
 function getRoleSpecificFields(user, userRole) {
   const fields = {};
+  const role = user.role.toLowerCase();
   
-  if (user.role === 'investor') {
+  // Investor & Buyer fields
+  if (role === 'investor') {
     fields.investmentFundSize = user.investmentFundSize;
-  } else if (user.role === 'startup') {
+    fields.investmentFocus = user.investmentFocus || 'General';
+  } else if (role === 'buyer') {
+    fields.buyingPower = user.buyingPower;
+    fields.preferredIndustries = user.preferredIndustries || [];
+  }
+  
+  // Startup & Seller fields
+  else if (role === 'startup') {
     fields.investmentRequired = user.investmentRequired;
-  } else if (user.role === 'consultant') {
+    fields.fundingStage = user.fundingStage || 'Early Stage';
+  } else if (role === 'seller') {
+    fields.productCategory = user.productCategory;
+    fields.businessStage = user.businessStage || 'Established';
+  }
+  
+  // Consultant & Advisor fields
+  else if (role === 'consultant' || role === 'advisor') {
     fields.services = user.servicesProvided;
-  } else if (user.role === 'impexp') {
+    fields.expertise = user.expertise || [];
+    fields.yearsOfExperience = user.yearsOfExperience;
+  }
+  
+  // Franchisor fields
+  else if (role === 'franchisor') {
+    fields.franchiseModel = user.franchiseModel;
+    fields.totalFranchises = user.totalFranchises;
+    fields.franchiseInvestment = user.franchiseInvestment;
+  }
+  
+  // Import/Export fields
+  else if (role === 'impexp') {
     fields.goodsType = user.goodsExported?.[0] || user.goodsImported?.[0];
+    fields.tradeRegions = user.tradeRegions || [];
+    fields.tradeVolume = user.tradeVolume;
   }
   
   return fields;

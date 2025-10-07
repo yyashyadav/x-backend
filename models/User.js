@@ -32,8 +32,7 @@ const userSchema = new mongoose.Schema({
   
   
   companyName: {
-    type: String,
-    required: true
+    type: String
   },
   website: {
     type: String
@@ -51,8 +50,7 @@ const userSchema = new mongoose.Schema({
     type: String
   },
   pinCode: {
-    type: String,
-    required: true
+    type: String
   },
   companyType: {
     type: String,
@@ -171,8 +169,7 @@ const userSchema = new mongoose.Schema({
 
   // Common fields for all
   gstOrCin: {
-    type: String,
-    required: true
+    type: String
   },
   documents: [String], 
   

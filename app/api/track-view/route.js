@@ -1,7 +1,7 @@
-import connectDB from '../../lib/mongodb';
-import User from '../../models/User';
-import ViewLog from '../../models/ViewLog';
-import { withAuth } from '../../lib/auth-middleware';
+import connectDB from '../../../lib/mongodb';
+import User from '../../../models/User';
+import ViewLog from '../../../models/ViewLog';
+import { withAuth } from '../../../lib/auth-middleware';
 
 
 async function trackViewHandler(request) {
@@ -38,29 +38,25 @@ async function trackViewHandler(request) {
     }
 
     
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const existingView = await ViewLog.findOne({
       viewer: viewerId,
-      viewedUser: viewedUserId,
-      viewedAt: { $gte: oneHourAgo }
+      viewedUser: viewedUserId
     });
 
     if (existingView) {
-      return Response.json({
-        success: true,
-        message: 'View already tracked recently'
+      existingView.count = (existingView.count || 1) + 1;
+      existingView.viewedAt = new Date();
+      await existingView.save();
+    } else {
+      const viewLog = new ViewLog({
+        viewer: viewerId,
+        viewedUser: viewedUserId,
+        source,
+        viewedAt: new Date(),
+        count: 1
       });
+      await viewLog.save();
     }
-
-    
-    const viewLog = new ViewLog({
-      viewer: viewerId,
-      viewedUser: viewedUserId,
-      source,
-      viewedAt: new Date()
-    });
-
-    await viewLog.save();
 
     return Response.json({
       success: true,

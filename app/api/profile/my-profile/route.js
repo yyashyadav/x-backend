@@ -67,16 +67,28 @@ async function updateProfileHandler(request) {
     const user = request.user; 
     const updateData = await request.json();
 
+    // Check if this update completes the profile based on role
+    const isProfileComplete = checkProfileCompletion(user.role, updateData);
+    
+    const updateFields = {
+      ...updateData,
+      ...(isProfileComplete && { 
+        step4Completed: true, 
+        profileCompleted: true 
+      })
+    };
     
     const updatedProfile = await User.findByIdAndUpdate(
       user.userId,
-      updateData,
+      updateFields,
       { new: true, runValidators: true }
     );
 
     return Response.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: isProfileComplete ? 
+        'Profile updated and completed successfully!' : 
+        'Profile updated successfully',
       data: updatedProfile
     });
 
@@ -93,6 +105,26 @@ async function updateProfileHandler(request) {
 export const GET = withAuth(getProfileHandler);
 export const PUT = withAuth(updateProfileHandler);
 
+// Check if profile is complete based on role and required fields
+function checkProfileCompletion(role, updateData) {
+  const roleRequirements = {
+    seller: ['productsAndServices', 'lastFYRevenue', 'fullTimeEmployees', 'saleType'],
+    investor: ['investmentFundSize', 'investmentType', 'locationPreferences'],
+    startup: ['businessIdea', 'problemSolved', 'investmentRequirement'],
+    consultant: ['servicesProvided', 'businessesAssisted'],
+    franchise: ['franchiseDescription', 'citiesOffered', 'minimumShopSpace'],
+    impexp: ['detailedDescription', 'iecNumber']
+  };
+
+  const requiredFields = roleRequirements[role] || [];
+  
+  // Check if all required fields are provided and not empty
+  return requiredFields.every(field => {
+    const value = updateData[field];
+    return value !== null && value !== undefined && 
+           (Array.isArray(value) ? value.length > 0 : value !== '');
+  });
+}
 
 function getRoleSpecificFields(user) {
   const roleFields = {

@@ -1,5 +1,5 @@
-import Notification from '../../../../../models/Notification';
-import { withAuth } from '../../../../../lib/auth-middleware';
+import Notification from '../../../../models/Notification';
+import { withAuth } from '../../../../lib/auth-middleware';
 
 // DELETE /api/notifications/:id
 async function deleteOneHandler(request, { params }) {

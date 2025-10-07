@@ -1,20 +1,34 @@
-import connectDB from '../../../../lib/mongodb';
-import User from '../../../../models/User';
-import { withAuth } from '../../../../lib/auth-middleware';
+
+import User from '../../../../../models/User';
+import { withAuth } from '../../../../../lib/auth-middleware';
+import connectDB from '../../../../../lib/mongodb';
 
 
-async function saveBusinessDetailsHandler(request) {
+async function saveBusinessDetailsStep1Handler(request) {
   try {
     await connectDB();
 
     const user = request.user; 
-    const { briefIntroduction, businessDescription } = await request.json();
+    const { 
+      companyName, 
+      pinCode, 
+      gstOrCin, 
+      website, 
+      linkedinProfile, 
+      city, 
+      state, 
+      country,
+      companyType,
+      yearOfRegistration,
+      industry,
+      briefIntroduction 
+    } = await request.json();
 
     
-    if (!briefIntroduction || !businessDescription) {
+    if (!companyName || !pinCode || !gstOrCin) {
       return Response.json({
         success: false,
-        message: 'Brief introduction and business description are required'
+        message: 'Company name, PIN code, and GST/CIN are required'
       }, { status: 400 });
     }
 
@@ -22,9 +36,19 @@ async function saveBusinessDetailsHandler(request) {
     const updatedUser = await User.findByIdAndUpdate(
       user.userId,
       { 
-        briefIntroduction,
-        businessDescription,
-        step2Completed: true 
+        companyName,
+        pinCode,
+        gstOrCin,
+        website: website || '',
+        linkedinProfile: linkedinProfile || '',
+        city: city || '',
+        state: state || '',
+        country: country || '',
+        companyType: companyType || '',
+        yearOfRegistration: yearOfRegistration || null,
+        industry: industry || '',
+        briefIntroduction: briefIntroduction || '',
+        step1Completed: true 
       },
       { new: true }
     );
@@ -34,8 +58,8 @@ async function saveBusinessDetailsHandler(request) {
       message: 'Business details step 1 completed successfully',
       data: {
         userId: updatedUser._id,
-        step: 2,
-        nextStep: 'Complete detailed business information'
+        step: 1,
+        nextStep: 'Complete business description'
       }
     }, { status: 200 });
 
@@ -49,7 +73,7 @@ async function saveBusinessDetailsHandler(request) {
 }
 
 
-async function getBusinessDetailsHandler(request) {
+async function getBusinessDetailsStep1Handler(request) {
   try {
     await connectDB();
 
@@ -68,9 +92,19 @@ async function getBusinessDetailsHandler(request) {
     return Response.json({
       success: true,
       data: {
+        companyName: userProfile.companyName,
+        pinCode: userProfile.pinCode,
+        gstOrCin: userProfile.gstOrCin,
+        website: userProfile.website,
+        linkedinProfile: userProfile.linkedinProfile,
+        city: userProfile.city,
+        state: userProfile.state,
+        country: userProfile.country,
+        companyType: userProfile.companyType,
+        yearOfRegistration: userProfile.yearOfRegistration,
+        industry: userProfile.industry,
         briefIntroduction: userProfile.briefIntroduction,
-        businessDescription: userProfile.businessDescription,
-        step2Completed: userProfile.step2Completed
+        step1Completed: userProfile.step1Completed
       }
     });
 
@@ -84,5 +118,5 @@ async function getBusinessDetailsHandler(request) {
 }
 
 
-export const POST = withAuth(saveBusinessDetailsHandler);
-export const GET = withAuth(getBusinessDetailsHandler);
+export const POST = withAuth(saveBusinessDetailsStep1Handler);
+export const GET = withAuth(getBusinessDetailsStep1Handler);

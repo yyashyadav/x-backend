@@ -20,14 +20,13 @@ const viewLogSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  sessionId: {
-    type: String 
-  },
   userAgent: {
     type: String
   },
-  ipAddress: {
-    type: String
+  count: {
+    type: Number,
+    default: 1,
+    min: 1
   }
 }, {
   timestamps: true
@@ -39,9 +38,7 @@ viewLogSchema.index({ viewer: 1, viewedAt: -1 });
 viewLogSchema.index({ viewedUser: 1, source: 1 });
 
 
-viewLogSchema.index({ viewer: 1, viewedUser: 1, viewedAt: 1 }, { 
-  unique: false,
-  expireAfterSeconds: 3600 // Allow same user to view again after 1 hour
-});
+// keep one rolling document per viewer/viewedUser (no time constraint)
+viewLogSchema.index({ viewer: 1, viewedUser: 1 }, { unique: true });
 
 export default mongoose.models.ViewLog || mongoose.model('ViewLog', viewLogSchema);

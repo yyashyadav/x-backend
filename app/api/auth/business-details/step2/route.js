@@ -3,53 +3,44 @@ import User from '../../../../../models/User';
 import { withAuth } from '../../../../../lib/auth-middleware';
 import connectDB from '../../../../../lib/mongodb';
 
-async function saveBusinessTypeHandler(request) {
+
+async function saveBusinessDetailsStep2Handler(request) {
   try {
     await connectDB();
 
     const user = request.user; 
-    const { businessType } = await request.json();
+    const { businessDescription } = await request.json();
 
- 
-    if (!businessType) {
+    
+    if (!businessDescription) {
       return Response.json({
         success: false,
-        message: 'Business type is required'
+        message: 'Business description is required'
       }, { status: 400 });
     }
 
    
-    const validTypes = ['seller', 'startup', 'investor', 'consultant', 'franchise', 'impexp'];
-    if (!validTypes.includes(businessType)) {
-      return Response.json({
-        success: false,
-        message: 'Invalid business type'
-      }, { status: 400 });
-    }
-
-    
     const updatedUser = await User.findByIdAndUpdate(
       user.userId,
       { 
-        role: businessType,
-        step3Completed: true 
+        businessDescription,
+        step2Completed: true 
       },
       { new: true }
     );
 
     return Response.json({
       success: true,
-      message: 'Business type selected successfully',
+      message: 'Business details step 2 completed successfully',
       data: {
         userId: updatedUser._id,
-        role: updatedUser.role,
-        step: 3,
-        nextStep: 'Complete business details'
+        step: 2,
+        nextStep: 'Select business type'
       }
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Business profile type error:', error);
+    console.error('Business details step 2 error:', error);
     return Response.json({
       success: false,
       message: 'Internal server error'
@@ -58,7 +49,7 @@ async function saveBusinessTypeHandler(request) {
 }
 
 
-async function getBusinessTypeHandler(request) {
+async function getBusinessDetailsStep2Handler(request) {
   try {
     await connectDB();
 
@@ -77,13 +68,13 @@ async function getBusinessTypeHandler(request) {
     return Response.json({
       success: true,
       data: {
-        currentBusinessType: userProfile.role,
-        step3Completed: userProfile.step3Completed
+        businessDescription: userProfile.businessDescription,
+        step2Completed: userProfile.step2Completed
       }
     });
 
   } catch (error) {
-    console.error('Get business profile type error:', error);
+    console.error('Get business details step 2 error:', error);
     return Response.json({
       success: false,
       message: 'Internal server error'
@@ -92,5 +83,5 @@ async function getBusinessTypeHandler(request) {
 }
 
 
-export const POST = withAuth(saveBusinessTypeHandler);
-export const GET = withAuth(getBusinessTypeHandler);
+export const POST = withAuth(saveBusinessDetailsStep2Handler);
+export const GET = withAuth(getBusinessDetailsStep2Handler);
